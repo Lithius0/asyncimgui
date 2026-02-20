@@ -77,6 +77,8 @@ async def main():
 
     app.schedule_coroutine(long_running_coroutine())   
     await app.run(runner_params)
+    # This point will only be reached once the app has shut down.
+    # You may want to put the run call in a try-finally block if you need additional graceful shutdown steps.
 
 if __name__ == "__main__":
     asyncio.run(main())

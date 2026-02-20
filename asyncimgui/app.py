@@ -6,7 +6,6 @@ import logging
 from collections.abc import Coroutine, Awaitable, Callable
 from typing import Any
 from dataclasses import dataclass
-import contextvars
 
 from imgui_bundle import hello_imgui
 
@@ -29,13 +28,13 @@ class TaskTracker:
         else:
             self.task = asyncio.create_task(coroutine, name=name)
         self.blocking = blocking
+        self.time_created = time.monotonic()
 
 class ImguiApp:
     """
     Helps handle async tasks and an async update loop with hello_imgui.
     Call `run` to start the loop. Method will return when the program shuts down.
-    If an async task needs to be run from a rendering call, schedule it via `schedule_blocking` or `schedule_background`.
-    For tasks that need to return before the next render, use `schedule_blocking`. Otherwise, use `schedule_background`. 
+    If an async task needs to be run from a rendering call, schedule it via `schedule`. There's also `schedule_coroutine` as a convenience.    
     """
 
     def __init__(self) -> None:
@@ -65,7 +64,6 @@ class ImguiApp:
             except Exception as e:
                 logger.exception(e)
 
-        # TODO: Timeout
         blocking_tasks = []
         to_remove = []
         for id, tracker in self.task_trackers.items():
@@ -124,11 +122,13 @@ class ImguiApp:
         hello_imgui.get_runner_params().app_shall_exit = True
 
     def schedule(self, tracker: TaskTracker) -> int:
+        """ Schedules a task tracker to the app. """
         task_id = self._get_task_id()
         self.task_trackers[self._get_task_id()] = tracker
         return task_id
     
     def schedule_coroutine(self, coroutine: Coroutine | Task, blocking: bool = False, name: str | None = None) -> tuple[int, TaskTracker]:
+        """ Convenience method for scheduling coroutines. Wraps the given coroutine/task in a TaskTracker, schedules it, and then returns the TaskTracker. """
         task_id = self._get_task_id()
         tracker = TaskTracker(coroutine=coroutine, blocking=blocking, name=name)
         self.task_trackers[self._get_task_id()] = tracker
