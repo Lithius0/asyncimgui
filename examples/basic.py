@@ -1,5 +1,5 @@
 from imgui_bundle import imgui, hello_imgui
-from asyncimgui import helpers, ImguiApp, TaskTracker
+from asyncimgui import helpers, ImguiApp, TaskTracker, docking
 import logging
 import asyncio
 from dataclasses import dataclass
@@ -63,7 +63,7 @@ async def main():
     app.callbacks.on_update = on_update
 
     # Creating the splits and their windows
-    main_split = helpers.create_main_split()
+    main_split = docking.create_main_split()
     main_split.add_window("Main", lambda: main_window(app, app_state))
     main_split.add_split("AppSpace", imgui.Dir.right, 0.5).add_window("App", lambda: app_window(app))
     main_split.add_split("LoggerSpace", imgui.Dir.down, 0.25).add_window("Logs", hello_imgui.log_gui)
@@ -74,7 +74,7 @@ async def main():
     main_split.attach_to_layout(runner_params.docking_params)
     runner_params.imgui_window_params.default_imgui_window_type = hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
 
-    app.schedule_coroutine(long_running_coroutine())   
+    app.schedule_coroutine(long_running_coroutine(), name="long_running_task")   
     await app.run(runner_params)
     # This point will only be reached once the app has shut down.
     # You may want to put the run call in a try-finally block if you need additional graceful shutdown steps.
