@@ -1,7 +1,7 @@
 [project]
 name = "asyncimgui"
 version = "0.1.0"
-description = "Add your description here"
+description = "This package is a wrapper around `imgui-bundle` to make it easier to use within an async app. "
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
