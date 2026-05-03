@@ -1,5 +1,5 @@
 from imgui_bundle import imgui, hello_imgui
-from asyncimgui import helpers, ImguiApp, TaskTracker, docking
+from asyncimgui import helpers, ImguiApp, TaskTracker, docking, schedule_coroutine
 import logging
 import asyncio
 from dataclasses import dataclass
@@ -31,7 +31,7 @@ async def sleep_then_log(time: float):
     await asyncio.sleep(time)
     logger.info("Short asnyc coroutine")
 
-def main_window(app: ImguiApp, state: AppState):
+def main_window(state: AppState):
     imgui.text("Hello world!")
     imgui.text("This is the main window.")
     imgui.text(f"Frames passed: {state.counter}")
@@ -39,9 +39,11 @@ def main_window(app: ImguiApp, state: AppState):
     if imgui.button("Create a log record"):
         logger.info("Hello!")
     if imgui.button("Short blocking task"):
-        app.schedule_coroutine(sleep_then_log(1), blocking=True)
+        # This module level function will work in gui functions and in the on_update callback.
+        # It's just a convenience to avoid having to pass the ImguiApp instance into every method.
+        schedule_coroutine(sleep_then_log(1), blocking=True)
     if imgui.button("Short non-blocking task"):
-        task_id, state.task_tracker = app.schedule_coroutine(sleep_then_log(1))
+        task_id, state.task_tracker = schedule_coroutine(sleep_then_log(1))
         logger.info(f"Task started with task id: {task_id}")
     if state.task_tracker is not None:
         imgui.text("Non-blocking task done" if state.task_tracker.task.done() else "Non-blocking task ongoing")
@@ -64,7 +66,7 @@ async def main():
 
     # Creating the splits and their windows
     main_split = docking.create_main_split()
-    main_split.add_window("Main", lambda: main_window(app, app_state))
+    main_split.add_window("Main", lambda: main_window(app_state))
     main_split.add_split("AppSpace", imgui.Dir.right, 0.5).add_window("App", lambda: app_window(app))
     main_split.add_split("LoggerSpace", imgui.Dir.down, 0.25).add_window("Logs", hello_imgui.log_gui)
 

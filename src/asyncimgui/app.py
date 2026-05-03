@@ -11,13 +11,29 @@ from imgui_bundle import hello_imgui
 
 logger = logging.getLogger(__name__)
 
+class NoImguiAppError(Exception):
+    pass
+
+_app: ImguiApp | None = None
+
+def get_current_app() -> ImguiApp:
+    if _app is None:
+        raise NoImguiAppError("There is no ImguiApp in context. This method can only be run in GUI functions and in on_update.")
+    return _app
+
+def schedule(tracker: TaskTracker) -> int:
+    return get_current_app().schedule(tracker) 
+
+def schedule_coroutine(coroutine: Coroutine | Task, blocking: bool = False, name: str | None = None) -> tuple[int, TaskTracker]:
+    return get_current_app().schedule_coroutine(coroutine, blocking, name) 
+
 @dataclass
 class AppCallbacks:
     """ All the callbacks for `ImguiApp` """
 
     # Called before tasks are processed for the update and prior to rendering.
     # The float passed in is time passed between the last frame and this one.
-    on_update: Callable[[float], Awaitable[Any]] | None = None
+    on_update: Callable[[float], Any] | None = None
     # Called prior to shutdown.
     on_shutdown: Callable[[], Awaitable[Any]] | None = None
 
@@ -52,6 +68,8 @@ class ImguiApp:
         return self._task_id
 
     async def _update(self):
+        global _app
+
         now = time.monotonic()
         elapsed_time = now - self._monotonic_time
         self._monotonic_time = now
@@ -60,7 +78,9 @@ class ImguiApp:
 
         if self.callbacks.on_update is not None:
             try:
-                await self.callbacks.on_update(elapsed_time)
+                _app = self
+                self.callbacks.on_update(elapsed_time)
+                _app = None
             except Exception as e:
                 logger.exception(e)
 
@@ -101,12 +121,16 @@ class ImguiApp:
                 raise
 
     async def run(self, runner_params: hello_imgui.RunnerParams):
+        global _app
+
         hello_imgui.manual_render.setup_from_runner_params(runner_params)
         self._monotonic_time = time.monotonic()
         try:
             while not hello_imgui.get_runner_params().app_shall_exit:
                 await self._update()
+                _app = self
                 hello_imgui.manual_render.render()
+                _app = None
                 await asyncio.sleep(0) # Give background tasks time to complete.
         finally:
             if self.callbacks.on_shutdown is not None:
@@ -133,6 +157,3 @@ class ImguiApp:
         tracker = TaskTracker(coroutine=coroutine, blocking=blocking, name=name)
         self.task_trackers[self._get_task_id()] = tracker
         return task_id, tracker
-
-
-    
