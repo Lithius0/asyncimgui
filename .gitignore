@@ -11,3 +11,6 @@ wheels/
 
 # Imgui ini files.
 /*.ini
+
+# Environment variables
+/.env
