@@ -1,12 +1,12 @@
 from imgui_bundle import imgui, hello_imgui
-from asyncimgui import helpers, ImguiApp, TaskTracker, docking, schedule_coroutine
+from asyncimgui import helpers, ImguiApp, TaskTracker, docking, schedule_coroutine, get_current_app
 import logging
 import asyncio
 from dataclasses import dataclass
 
 logging.basicConfig(
     level=logging.DEBUG,
-    handlers=[helpers.ImguiLogHandler()],
+    handlers=[helpers.ImguiLogHandler(), logging.StreamHandler()],
     format="%(asctime)s %(levelname)s > %(message)s"
 )
 
@@ -47,6 +47,9 @@ def main_window(state: AppState):
         logger.info(f"Task started with task id: {task_id}")
     if state.task_tracker is not None:
         imgui.text("Non-blocking task done" if state.task_tracker.task.done() else "Non-blocking task ongoing")
+
+    helpers.show_object("App State", "App State", get_current_app(), 5)
+    helpers.show_object("list", "List", [1, 2, 5], 5)
         
 
 def app_window(app: ImguiApp):
@@ -59,7 +62,7 @@ async def main():
     app = ImguiApp()
     app_state = AppState()
 
-    async def on_update(dt: float):
+    def on_update(dt: float):
         app_state.counter += 1
 
     app.callbacks.on_update = on_update
