@@ -31,6 +31,8 @@ def schedule_coroutine(coroutine: Coroutine | Task, blocking: bool = False, name
 class AppCallbacks:
     """ All the callbacks for `ImguiApp` """
 
+    # Called before rendering but after runner params are set up.
+    on_start: Callable[[], Any] | None = None
     # Called before tasks are processed for the update and prior to rendering.
     # The float passed in is time passed between the last frame and this one.
     on_update: Callable[[float], Any] | None = None
@@ -124,6 +126,11 @@ class ImguiApp:
         global _app
 
         hello_imgui.manual_render.setup_from_runner_params(runner_params)
+        if self.callbacks.on_start is not None:
+            returned = self.callbacks.on_start()
+            if isinstance(returned, Awaitable):
+                await returned
+                
         self._monotonic_time = time.monotonic()
         try:
             while not hello_imgui.get_runner_params().app_shall_exit:

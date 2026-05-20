@@ -65,6 +65,12 @@ async def main():
     def on_update(dt: float):
         app_state.counter += 1
 
+    async def on_start():
+        print("on_start called")
+        await asyncio.sleep(1)
+        print("on_start complete")
+
+    app.callbacks.on_start = on_start
     app.callbacks.on_update = on_update
 
     # Creating the splits and their windows
