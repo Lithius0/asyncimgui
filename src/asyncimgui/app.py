@@ -37,7 +37,7 @@ class AppCallbacks:
     # The float passed in is time passed between the last frame and this one.
     on_update: Callable[[float], Any] | None = None
     # Called prior to shutdown.
-    on_shutdown: Callable[[], Awaitable[Any]] | None = None
+    on_shutdown: Callable[[], Any] | None = None
 
 class TaskTracker:
     def __init__(self, coroutine: Coroutine | Task, blocking: bool = False, name: str | None = None) -> None:
@@ -129,8 +129,10 @@ class ImguiApp:
         if self.callbacks.on_start is not None:
             returned = self.callbacks.on_start()
             if isinstance(returned, Awaitable):
+                # on_start throwing an exception shouldn't start the program since it's likely to be in an invalid state at this point.
+                # Don't catch, just let it raise.
                 await returned
-                
+
         self._monotonic_time = time.monotonic()
         try:
             while not hello_imgui.get_runner_params().app_shall_exit:
@@ -142,7 +144,9 @@ class ImguiApp:
         finally:
             if self.callbacks.on_shutdown is not None:
                 try:
-                    await self.callbacks.on_shutdown()
+                    returned = self.callbacks.on_shutdown()
+                    if isinstance(returned, Awaitable):
+                        await returned
                 except Exception as e:
                     logger.exception(e)
             await self._cancel_tasks()
